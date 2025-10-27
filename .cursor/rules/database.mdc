@@ -1,0 +1,92 @@
+---
+alwaysApply: true
+---
+
+# データベースルール
+
+## テーブル定義
+
+### memosテーブル
+
+#### カラム定義
+
+| カラム名 | データ型 | NULL | キー | 説明 |
+|----------|----------|------|------|------|
+| id | BIGINT UNSIGNED | NO | PK | 主キー |
+| user_id | BIGINT UNSIGNED | NO | FK | ユーザーID |
+| title | VARCHAR(255) | NO | - | メモのタイトル |
+| body | TEXT | NO | - | メモの本文 |
+| created_at | TIMESTAMP | YES | - | 作成日時 |
+| updated_at | TIMESTAMP | YES | - | 更新日時 |
+
+#### リレーション
+
+| 関連テーブル | 関係 | 削除時の動作 |
+|--------------|------|--------------|
+| users | 1対多 | CASCADE |
+
+#### マイグレーション実装例
+
+```php
+Schema::create('memos', function (Blueprint $table) {
+    $table->id();
+    $table->foreignId('user_id')->constrained()->cascadeOnDelete();
+    $table->string('title');
+    $table->text('body');
+    $table->timestamps();
+    
+    // パフォーマンス最適化のためのインデックス
+    $table->index('created_at');
+});
+```
+
+#### モデルリレーション実装例
+
+User.php:
+```php
+public function memos(): HasMany
+{
+    return $this->hasMany(Memo::class);
+}
+```
+
+Memo.php:
+```php
+public function user(): BelongsTo
+{
+    return $this->belongsTo(User::class);
+}
+
+protected $fillable = ['user_id', 'title', 'body'];
+```
+
+## シーディング
+
+### サンプルデータ要件
+
+- 最低4件のメモデータを作成
+- 様々な文字種を含むテストデータ（日本語、英数字、記号、絵文字）
+- 改行を含むデータで表示確認
+
+### シーダー実装例
+
+DatabaseSeeder.php:
+```php
+// テストユーザー作成
+$user = User::factory()->create([
+    'name' => 'Test User',
+    'email' => 'test@example.com',
+]);
+
+// メモデータ作成
+$memos = [
+    ['title' => 'PHP', 'body' => 'PHPは、Hypertext Preprocessorの略です。'],
+    ['title' => 'HTML', 'body' => 'HTMLは、Hypertext Markup Languageの略です。'],
+    ['title' => 'CSS', 'body' => "CSSは、\nCascading Style Sheets\nの略です。"],
+    ['title' => '混在', 'body' => "Test123 てすとアイウエオｱｲｳｴｵ\n漢字！ＡＢＣ ａｂｃ １２３ 😊✨"],
+];
+
+foreach ($memos as $memo) {
+    $user->memos()->create($memo);
+}
+```
