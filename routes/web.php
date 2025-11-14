@@ -29,4 +29,6 @@ Route::middleware(['auth'])->group(function () {
             ),
         )
         ->name('two-factor.show');
+
+    Volt::route('memos', 'memos.index')->name('memos.index');
 });
